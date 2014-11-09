@@ -1,0 +1,8 @@
+# Ignore these files.
+
+.idea/*\.iws
+.idea/workspace.xml
+.idea/tasks.xml
+
+# Except this file
+!.gitignore
