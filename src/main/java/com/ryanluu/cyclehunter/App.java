@@ -1,5 +1,6 @@
 package com.ryanluu.cyclehunter;
 
+import com.ryanluu.cyclehunter.model.CycleHunterSettings;
 import com.ryanluu.cyclehunter.ui.SettingsPane;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -7,9 +8,12 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
 
 
 public class App extends Application {
+
+    private Logger logger = Logger.getLogger(App.class);
 
     private static App app;
     private Stage stage;
@@ -54,18 +58,13 @@ public class App extends Application {
             SettingsPane settingsPane = new SettingsPane(settings);
 
             root.setLeft(settingsPane);
+            // TODO:  add right pane, top pane, bottom pane and center pane.
 
             Scene scene = new Scene(root);
 
             primaryStage.setScene(scene);
             primaryStage.show();
 
-//            Dialogs.create()
-//                    .owner(stage)
-//                    .title("Information Dialog")
-//                    .masthead("Look, an Information Dialog")
-//                    .message("I have a great message for you!")
-//                    .showInformation();
         }
     }
 
@@ -75,6 +74,8 @@ public class App extends Application {
         if (settings != null) {
             // Save settings.
             settings.saveSettings();
+
+            logger.info("Exiting.");
         }
     }
 

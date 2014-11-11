@@ -2,6 +2,7 @@ package com.ryanluu.cyclehunter.model;
 
 import javafx.scene.paint.Color;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -9,6 +10,7 @@ import java.math.BigDecimal;
  * to compare historical data.
  */
 public class LookbackMultiple {
+
     private String name;
     private BigDecimal lookbackMultiple;
     private Color color;
