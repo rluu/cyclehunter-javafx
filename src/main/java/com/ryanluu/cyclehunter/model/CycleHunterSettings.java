@@ -1,19 +1,19 @@
 package com.ryanluu.cyclehunter.model;
 
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
+import java.io.File;
+import java.io.IOException;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import javafx.scene.paint.Color;
 
 import org.apache.log4j.Logger;
 
-import com.ryanluu.cyclehunter.model.LookbackMultiple;
+import org.codehaus.jackson.map.ObjectMapper;
 
 
 /**
@@ -24,7 +24,7 @@ import com.ryanluu.cyclehunter.model.LookbackMultiple;
  */
 public class CycleHunterSettings {
 
-    private static final long serialVersionUID = 1L;
+    //private static final long serialVersionUID = 1L;
 
     /**
      * Log4j static logger instance.
@@ -32,17 +32,37 @@ public class CycleHunterSettings {
     private static final Logger logger =
             Logger.getLogger(CycleHunterSettings.class);
 
+    /**
+     * Contains the user home directory.  (e.g. /home/username).
+     * Unfortunately, in JavaFX for jdk1.8.0_20,
+     * calling System.getProperty("user.home") consistently returns null.
+     * So we can't the home directory.  If we see a null, the
+     * failover logic uses /tmp as the home directory instead.
+      */
+    private static String USER_HOME_DIR = System.getenv("user.home");
+
+    /**
+     * Directory name that will be where we store all application data.
+     */
+    private static final String SETTINGS_DIRECTORY = ".cycleHunter";
+
+    /**
+     * Name of the file which we will store CycleHunterSettings into.
+     * This file has data in JSON format, formatted by the
+     * Jackson JSON library.  (jackson-mapper-asl).
+     */
+    private static final String SETTINGS_FILENAME = "cycleHunterSettings.json";
+
     private String lastOpenedCsvFilename = "";
 
-    private Map<String, Boolean> planetNamesEnabledMap =
-            new LinkedHashMap<String, Boolean>();
+    private List<PlanetSelection> planetSelectionList =
+            new LinkedList<>();
 
-    private Map<LookbackMultiple, Boolean> integerLookbackMultiplesEnabledMap =
-            new LinkedHashMap<LookbackMultiple, Boolean>();
+    private List<LookbackMultiple> customLookbackMultiplesList =
+            new LinkedList<>();
 
-    private Map<LookbackMultiple, Boolean> geometricLookbackMultiplesEnabledMap =
-            new LinkedHashMap<LookbackMultiple, Boolean>();
-
+    private List<LookbackMultiple> fixedLookbackMultiplesList =
+            new LinkedList<>();
 
     /**
      * Flag that indicates that this settings object has
@@ -54,6 +74,28 @@ public class CycleHunterSettings {
      * Default constructor.
      */
     public CycleHunterSettings() {
+        CycleHunterSettings.doHomeDirCheck();
+    }
+
+    /**
+     * Ensures that the USER_HOME_DIR string is not null.
+     */
+    private static void doHomeDirCheck() {
+        // Ensure USER_HOME_DIR is not null.
+        logger.debug("user.home is: " + CycleHunterSettings.USER_HOME_DIR);
+
+        if (CycleHunterSettings.USER_HOME_DIR == null) {
+            logger.warn("Ahhh!!!! Why can't we get the " +
+                    "user home directory?  Is it because " +
+                    "JavaFX simulates being in a Java Applet?  " +
+                    "Instead, I'll use /tmp as the home directory instead.  " +
+                    "This would fail on Windows boxes.");
+
+            // Use alternate filename:
+            CycleHunterSettings.USER_HOME_DIR = "/tmp";
+            logger.debug("Using alternate userHomeDir: " +
+                    CycleHunterSettings.USER_HOME_DIR);
+        }
     }
 
     /**
@@ -66,62 +108,136 @@ public class CycleHunterSettings {
         // No previous opened file by default.
         lastOpenedCsvFilename = "";
 
-        // G.Sun is selected by default.
-        planetNamesEnabledMap.put("G.Ascendant", false);
+        // Variable to hold the current PlanetSelection being
+        // created before adding it to the list.
+        PlanetSelection ps;
 
-        planetNamesEnabledMap.put("G.CalendarDay", false);
+        // Parameters to the PlanetSelection construtor.
+        // We will be modifying these variables before creating
+        // each PlanetSelection.
+        String planetName;
+        PlanetSelection.Centricity geocentric =
+                PlanetSelection.Centricity.GEOCENTRIC;
+        PlanetSelection.Centricity heliocentric =
+                PlanetSelection.Centricity.HELIOCENTRIC;
+        Boolean enabled = false;
 
-        planetNamesEnabledMap.put("G.Sun", true);
-        planetNamesEnabledMap.put("G.Moon", false);
-        planetNamesEnabledMap.put("G.Mercury", false);
-        planetNamesEnabledMap.put("G.Venus", false);
-        planetNamesEnabledMap.put("G.Mars", false);
-        planetNamesEnabledMap.put("G.Jupiter", false);
-        planetNamesEnabledMap.put("G.Saturn", false);
-        planetNamesEnabledMap.put("G.Uranus", false);
-        planetNamesEnabledMap.put("G.Neptune", false);
-        planetNamesEnabledMap.put("G.Pluto", false);
-        planetNamesEnabledMap.put("G.TrueNorthNode", false);
+        // Create PlanetSelection objects.
 
-        planetNamesEnabledMap.put("H.Mercury", false);
-        planetNamesEnabledMap.put("H.Venus", false);
-        planetNamesEnabledMap.put("H.Earth", false);
-        planetNamesEnabledMap.put("H.Mars", false);
-        planetNamesEnabledMap.put("H.Jupiter", false);
-        planetNamesEnabledMap.put("H.Saturn", false);
-        planetNamesEnabledMap.put("H.Uranus", false);
-        planetNamesEnabledMap.put("H.Neptune", false);
-        planetNamesEnabledMap.put("H.Pluto", false);
+        planetName = "Ascendant";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
 
 
+        planetName = "CalendarDay";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
 
-        // Integer LookbackMulitples.
-        // Integers to include:
-        // Note: TreeSets stay sorted and do not keep duplicates.
-        Set<Integer> integers = new TreeSet<Integer>();
 
+        planetName = "Sun";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Moon";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Mercury";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Venus";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Mars";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Jupiter";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Saturn";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Uranus";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Neptune";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Pluto";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "TrueNorthNode";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+
+        planetName = "Mercury";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Venus";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Earth";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Mars";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Jupiter";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Saturn";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Uranus";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Neptune";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+        planetName = "Pluto";
+        ps = new PlanetSelection(planetName, geocentric, enabled);
+        planetSelectionList.add(ps);
+
+
+
+        // Custom LookbackMulitples.
+        // Put in default numbers.
+        List<Integer> integers = new ArrayList<Integer>();
         for (int i = 1; i < 15; i++) {
             integers.add(i);
         }
-
         logger.debug("Length of integers is: " + integers.size());
 
-        // These ints will come out in increasing order.
-        for (int multiple : integers) {
-
+        for (Integer multiple : integers) {
+            
             // Create a LookbackMultiple.
             LookbackMultiple lm = new LookbackMultiple();
-
+            
             lm.setName(String.valueOf(multiple));
             lm.setLookbackMultiple(new BigDecimal(multiple));
             lm.setColor(Color.GRAY);
-
-            // Integer LookbackMultiples will start out unchecked/disabled.
-            Boolean enabled = false;
-            integerLookbackMultiplesEnabledMap.put(lm, enabled);
+            lm.setEnabled(false);
+            customLookbackMultiplesList.add(lm);
         }
-
-        // Geometric LookbackMulitples.
+        
+        // Fixed LookbackMulitples.
         double phi = (1.0 + Math.sqrt(5.0)) / 2.0;
 
         // These values:
@@ -154,10 +270,9 @@ public class CycleHunterSettings {
             lm.setName(name);
             lm.setLookbackMultiple(new BigDecimal(multiple));
             lm.setColor(Color.GRAY);
+            lm.setEnabled(enabled);
 
-            // Geometric LookbackMultiples will start out unchecked/disabled.
-            Boolean enabled = false;
-            geometricLookbackMultiplesEnabledMap.put(lm, enabled);
+            fixedLookbackMultiplesList.add(lm);
         }
 
         {
@@ -171,10 +286,9 @@ public class CycleHunterSettings {
             lm.setName(name);
             lm.setLookbackMultiple(new BigDecimal(multiple));
             lm.setColor(Color.GRAY);
+            lm.setEnabled(enabled);
 
-            // Geometric LookbackMultiples will start out unchecked/disabled.
-            Boolean enabled = false;
-            geometricLookbackMultiplesEnabledMap.put(lm, enabled);
+            fixedLookbackMultiplesList.add(lm);
         }
 
         for (int i : new int[] { 2, 3, 5 }) {
@@ -188,10 +302,9 @@ public class CycleHunterSettings {
             lm.setName(name);
             lm.setLookbackMultiple(new BigDecimal(multiple));
             lm.setColor(Color.GRAY);
-
-            // Geometric LookbackMultiples will start out unchecked/disabled.
-            Boolean enabled = false;
-            geometricLookbackMultiplesEnabledMap.put(lm, enabled);
+            lm.setEnabled(enabled);
+            
+            fixedLookbackMultiplesList.add(lm);
         }
 
 
@@ -203,8 +316,47 @@ public class CycleHunterSettings {
      */
     public void saveSettings() {
         // Saving is not supported (yet).
-        logger.info("Save operation invoked, but saving " +
-                "has not been implemented.  Nothing saved.");
+        //logger.info("Save operation invoked, but saving " +
+        //        "has not been implemented.  Nothing saved.");
+
+
+
+
+        // Save to a JSON file on the filesystem.
+        ObjectMapper mapper = new ObjectMapper();
+
+        // First get a string of the full path of the
+        // containing directory where we will store settings data.
+        String containingDirectoryStr =
+                CycleHunterSettings.USER_HOME_DIR + File.separator +
+                CycleHunterSettings.SETTINGS_DIRECTORY;
+
+        // Get the string of the full path of the filename where
+        // we will attempt to write data.
+        String filenameStr = containingDirectoryStr + File.separator +
+                CycleHunterSettings.SETTINGS_FILENAME;
+
+        try {
+            logger.debug("Attempting to save settings to file '" + filenameStr + "' ...");
+
+            // Check to see if the directory we are writing to exists.
+            File containingDirectory = new File(containingDirectoryStr);
+            if (containingDirectory.exists() == false) {
+                logger.info("Creating directory '" + containingDirectoryStr +
+                        "' for saving CycleHunterSettings ...");
+                containingDirectory.mkdirs();
+            }
+
+            // Write JSON to file.
+            mapper.writeValue(new File(filenameStr), this);
+
+            logger.info("Wrote CycleHunterSettings to file: " + filenameStr);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.error("Failed to write setting to json file: " + filenameStr, e);
+        }
+
     }
 
     /**
@@ -214,40 +366,104 @@ public class CycleHunterSettings {
      */
     public static CycleHunterSettings loadSettings() {
 
-        logger.info("Using default initialization settings.");
+        // Return value.
+        CycleHunterSettings settings = null;
 
-        CycleHunterSettings settings = new CycleHunterSettings();
-        settings.initializeWithDefaultSettings();
+        // Ensure that the USER_HOME_DIR variable is not null
+        // before assembling the filename.
+        CycleHunterSettings.doHomeDirCheck();
+
+        // Load from file.
+        String filename =
+                CycleHunterSettings.USER_HOME_DIR + File.separator +
+                CycleHunterSettings.SETTINGS_DIRECTORY + File.separator +
+                CycleHunterSettings.SETTINGS_FILENAME;
+
+        // Check to see if the file we want to load exists.
+
+        Path path = Paths.get(filename);
+        if (Files.exists(path) && Files.isRegularFile(path) && Files.isReadable(path)) {
+            logger.info("Attempting to load settings from file '" + filename + "' ...");
+
+            // The file exists.  Try to read JSON from it, and map it to a class.
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                settings = mapper.readValue(new File(filename), CycleHunterSettings.class);
+
+                logger.info("Settings loaded.");
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                logger.error("IOException while trying to load settings from disk file.", e);
+
+
+                logger.info("Continuing on with default settings and preferences.");
+                settings = new CycleHunterSettings();
+                settings.initializeWithDefaultSettings();
+            }
+        }
+        else {
+            // File does not exist, so we can't load settings from it yet.
+            logger.info("The application could not find a previous json file to read " +
+                    "for loading settings.  " +
+                    "The file we were looking for was: " + filename + ".  " +
+                    "We will now initialize, using default values instead.");
+            settings = new CycleHunterSettings();
+            settings.initializeWithDefaultSettings();
+        }
 
         return settings;
     }
 
 
     /**
-     * This list returns a list of planet names that are
-     * check-marked in the list.
+     * This list returns a list of PlanetSelection objects
+     * that are enabled
+     * (i.e. logically selected in the list).
      * @return
      */
-    public List<String> getPlanetNamesEnabledList() {
-        List<String> rv = new LinkedList<String>();
+    public List<PlanetSelection> getPlanetSelectionsEnabledList() {
+        List<PlanetSelection> rv = new LinkedList<PlanetSelection>();
 
-        for (String key : planetNamesEnabledMap.keySet()) {
-            if (planetNamesEnabledMap.get(key) == true) {
-                // It is enabled.
-                rv.add(key);
+        for (PlanetSelection ps : planetSelectionList) {
+            if (ps.getEnabled()) {
+                rv.add(ps);
             }
         }
 
         return rv;
     }
 
-    public List<LookbackMultiple> getIntegerLookbackMultiplesEnabledList() {
+    /**
+     * This list returns a list of customizable
+     * LookbackMultiple objects that are enabled
+     * (i.e. logically selected in the list).
+     * @return
+     */
+    public List<LookbackMultiple> getCustomLookbackMultiplesEnabledList() {
         List<LookbackMultiple> rv = new LinkedList<LookbackMultiple>();
 
-        for (LookbackMultiple key : integerLookbackMultiplesEnabledMap.keySet()) {
-            if (integerLookbackMultiplesEnabledMap.get(key) == true) {
-                // It is enabled.
-                rv.add(key);
+        for (LookbackMultiple lm : customLookbackMultiplesList) {
+            if (lm.getEnabled()) {
+                rv.add(lm);
+            }
+        }
+
+        return rv;
+    }
+
+    /**
+     * This list returns a list of non-customizable
+     * LookbackMultiple objects that are enabled
+     * (i.e. logically selected in the list).
+     * @return
+     */
+    public List<LookbackMultiple> getFixedLookbackMultiplesEnabledList() {
+        List<LookbackMultiple> rv = new LinkedList<LookbackMultiple>();
+
+        for (LookbackMultiple lm : fixedLookbackMultiplesList) {
+            if (lm.getEnabled()) {
+                rv.add(lm);
             }
         }
 
@@ -262,28 +478,28 @@ public class CycleHunterSettings {
         this.lastOpenedCsvFilename = lastOpenedCsvFilename;
     }
 
-    public Map<String, Boolean> getPlanetNamesEnabledMap() {
-        return planetNamesEnabledMap;
+    public List<PlanetSelection> getPlanetSelectionList() {
+        return planetSelectionList;
     }
 
-    public void setPlanetNamesEnabledMap(Map<String, Boolean> planetNamesEnabledMap) {
-        this.planetNamesEnabledMap = planetNamesEnabledMap;
+    public void setPlanetSelectionList(List<PlanetSelection> planetSelectionList) {
+        this.planetSelectionList = planetSelectionList;
     }
 
-    public Map<LookbackMultiple, Boolean> getIntegerLookbackMultiplesEnabledMap() {
-        return integerLookbackMultiplesEnabledMap;
+    public List<LookbackMultiple> getCustomLookbackMultiplesList() {
+        return customLookbackMultiplesList;
     }
 
-    public void setIntegerLookbackMultiplesEnabledMap(Map<LookbackMultiple, Boolean> integerLookbackMultiplesEnabledMap) {
-        this.integerLookbackMultiplesEnabledMap = integerLookbackMultiplesEnabledMap;
+    public void setCustomLookbackMultiplesList(List<LookbackMultiple> customLookbackMultiplesList) {
+        this.customLookbackMultiplesList = customLookbackMultiplesList;
     }
 
-    public Map<LookbackMultiple, Boolean> getGeometricLookbackMultiplesEnabledMap() {
-        return geometricLookbackMultiplesEnabledMap;
+    public List<LookbackMultiple> getFixedLookbackMultiplesList() {
+        return fixedLookbackMultiplesList;
     }
 
-    public void setGeometricLookbackMultiplesEnabledMap(Map<LookbackMultiple, Boolean> geometricLookbackMultiplesEnabledMap) {
-        this.geometricLookbackMultiplesEnabledMap = geometricLookbackMultiplesEnabledMap;
+    public void setFixedLookbackMultiplesList(List<LookbackMultiple> fixedLookbackMultiplesList) {
+        this.fixedLookbackMultiplesList = fixedLookbackMultiplesList;
     }
 
     public boolean isInitialized() {

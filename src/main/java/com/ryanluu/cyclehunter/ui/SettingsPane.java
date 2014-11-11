@@ -2,6 +2,7 @@ package com.ryanluu.cyclehunter.ui;
 
 import com.ryanluu.cyclehunter.model.CycleHunterSettings;
 import com.ryanluu.cyclehunter.model.LookbackMultiple;
+import com.ryanluu.cyclehunter.model.PlanetSelection;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
@@ -18,6 +19,7 @@ import org.apache.log4j.Logger;
 import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -133,12 +135,10 @@ public class SettingsPane extends Pane {
     }
 
     private TitledPane createPlanetsTitledPane() {
-
-        // Get the map from settings, which we will use to
-        // extract the planets that should be in our list,
-        // and whether a particular one is selected or not.
-        Map<String, Boolean> planetNamesEnabledMap =
-                settings.getPlanetNamesEnabledMap();
+        // Get the list of all supported planet selections,
+        // and their associated properties.
+        List<PlanetSelection> planetSelectionList =
+                settings.getPlanetSelectionList();
 
         // Create a toggle group.
         ToggleGroup group = new ToggleGroup();
@@ -147,9 +147,9 @@ public class SettingsPane extends Pane {
         VBox layout = new VBox();
 
         // Create the radio buttons.  Add them to the toggle group as we go.
-        for (Map.Entry<String, Boolean> entry : planetNamesEnabledMap.entrySet()) {
-            String planetName = entry.getKey();
-            Boolean enabled = entry.getValue();
+        for (PlanetSelection ps : planetSelectionList) {
+            String planetName = ps.getDisplayName();
+            Boolean enabled = ps.getEnabled();
 
             RadioButton rb = new RadioButton(planetName);
             rb.setToggleGroup(group);
@@ -169,11 +169,10 @@ public class SettingsPane extends Pane {
 
     private TitledPane createIntegerLookBackMultiplesTitledPane() {
 
-        // Get the map from settings, which we will use to
-        // extract the lookback periods that should be in
-        // our list, and whether a particular one is selected or not.
-        Map<LookbackMultiple, Boolean> integerLookbackMultiplesEnabledMap =
-                settings.getIntegerLookbackMultiplesEnabledMap();
+        // Get the list of all supported customizable LookbacMultiples,
+        // and their associated properties.
+        List<LookbackMultiple> customLookbackMultiplesList =
+                settings.getCustomLookbackMultiplesList();
 
         // This is the layout that all the entries will go into.
         GridPane gridPane = new GridPane();
@@ -181,10 +180,8 @@ public class SettingsPane extends Pane {
         int rowIndex = 0;
 
         // Create entries for each row within the layout.
-        for (Map.Entry<LookbackMultiple, Boolean> entry :
-                integerLookbackMultiplesEnabledMap.entrySet()) {
-            LookbackMultiple lm = entry.getKey();
-            Boolean enabled = entry.getValue();
+        for (LookbackMultiple lm : customLookbackMultiplesList) {
+            Boolean enabled = lm.getEnabled();
 
             //CheckBox cb = new CheckBox(lm.getName());
             //cb.setTooltip(new Tooltip(lm.getName()));
@@ -217,11 +214,10 @@ public class SettingsPane extends Pane {
 
     private TitledPane createGeometricLookBackMultiplesTitledPane() {
 
-        // Get the map from settings, which we will use to
-        // extract the lookback periods that should be in
-        // our list, and whether a particular one is selected or not.
-        Map<LookbackMultiple, Boolean> geometricLookbackMultiplesEnabledMap =
-                settings.getGeometricLookbackMultiplesEnabledMap();
+        // Get the list of all supported non-customizable LookbacMultiples,
+        // and their associated properties.
+        List<LookbackMultiple> fixedLookbackMultiplesList =
+                settings.getFixedLookbackMultiplesList();
 
         // This is the layout that all the entries will go into.
         GridPane gridPane = new GridPane();
@@ -231,10 +227,8 @@ public class SettingsPane extends Pane {
 
 
         // Create entries for each row within the layout.
-        for (Map.Entry<LookbackMultiple, Boolean> entry :
-                geometricLookbackMultiplesEnabledMap.entrySet()) {
-            LookbackMultiple lm = entry.getKey();
-            Boolean enabled = entry.getValue();
+        for (LookbackMultiple lm : fixedLookbackMultiplesList) {
+            Boolean enabled = lm.getEnabled();
 
             // Get the lookback multiple rounded to 3 significant digits.
             BigDecimal scaled =

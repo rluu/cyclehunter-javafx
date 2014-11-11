@@ -42,6 +42,18 @@
       <version>2.00.00</version>
     </dependency>
 
+    <!-- Jackson JSON library for saving and loading settings to/from file. -->
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <version>1.4.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <version>1.4.3</version>
+    </dependency>
+
   </dependencies>
 
 
