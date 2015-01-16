@@ -1,5 +1,5 @@
-cyclehunter
-===========
+cyclehunter-javafx
+==================
 
 JavaFX application for graphically comparing historical stock and futures price data to hunt for cycles.
 
@@ -12,9 +12,9 @@ JavaFX application for graphically comparing historical stock and futures price 
 
 #### Running: 
 
-> git clone https://github.com/rluu/cyclehunter.git
+> git clone https://github.com/rluu/cyclehunter-javafx.git
 >
-> cd cyclehunter
+> cd cyclehunter-javafx
 >
 > mvn package
 >

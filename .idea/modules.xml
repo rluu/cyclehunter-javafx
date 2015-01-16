@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/cyclehunter.iml" filepath="$PROJECT_DIR$/cyclehunter.iml" />
+      <module fileurl="file://$PROJECT_DIR$/cyclehunter-javafx.iml" filepath="$PROJECT_DIR$/cyclehunter-javafx.iml" />
     </modules>
   </component>
 </project>
