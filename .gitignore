@@ -1,8 +1,12 @@
 # Ignore these files.
 
+# IntelliJ workspace files that shouldn't be shared.
 .idea/*\.iws
 .idea/workspace.xml
 .idea/tasks.xml
+
+# Build artifacts.
+target/*
 
 # Except this file
 !.gitignore

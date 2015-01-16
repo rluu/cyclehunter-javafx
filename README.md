@@ -4,19 +4,17 @@ cyclehunter
 JavaFX application for graphically comparing historical stock and futures price data to hunt for cycles.
 
 
-##### Dependencies: #####
+#### Dependencies: 
 
-- Java 1.8
+- Java SE 8 JDK.
 - Maven 2
 
 
-##### Running: ######
+#### Running: 
 
 > git clone https://github.com/rluu/cyclehunter.git
 >
 > cd cyclehunter
->
-> mvn compile
 >
 > mvn package
 >
